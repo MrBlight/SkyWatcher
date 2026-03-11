@@ -65,7 +65,7 @@ python run.py --once --unit f
 
 SkyWatcher is written to run on any platform Python 3.8+ supports.
 
-**Linux:** Works out of the box on any modern distro. The `curses` module is part of the standard library. Just install Python and run `python run.py`. Tested on Debian, Ubuntu, Fedora, and Arch.
+**Linux:** Works out of the box on any modern distro. The `curses` module is part of the standard library. Just install Python and run `python run.py`. Self tested on Debian.
 
 **BSD (FreeBSD, OpenBSD, NetBSD):** Python's `curses` binds directly to the system ncurses library, which ships with every major BSD. Install Python from ports or pkgsrc (`pkg install python3` on FreeBSD), then run as normal. No additional dependencies.
 
