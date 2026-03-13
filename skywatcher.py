@@ -2,13 +2,6 @@
 """
 SkyWatcher - Terminal Weather Program
 
-Free software: you can redistribute it and/or modify it under the terms
-of the GNU General Public License as published by the Free Software
-Foundation, version 3 or any later version.
-
-This program is distributed WITHOUT ANY WARRANTY; without even the implied
-warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
 DATA SOURCES  (all free, no API key, no account required)
 ----------------------------------------------------------
 Weather:      Open-Meteo          open-meteo.com
@@ -69,12 +62,12 @@ SEARCH TIPS
 
 CROSS-PLATFORM
 --------------
-  Python 3.8+  --  Linux, BSD, macOS, Windows
+  Python 3.8+  --  Linux, BSD, macOS, Windows, etc
 """
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # STANDARD LIBRARY IMPORTS  (zero non-stdlib deps except "requests")
-# ─────────────────────────────────────────────────────────────────────────────
+
 import io
 import os
 import sys
@@ -89,9 +82,9 @@ import configparser
 import textwrap
 import xml.etree.ElementTree as ET
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # PLATFORM DETECTION
-# ─────────────────────────────────────────────────────────────────────────────
+
 _SYS      = platform.system().lower()
 IS_WINDOWS = _SYS == "windows"
 IS_MACOS   = _SYS == "darwin"
@@ -101,9 +94,9 @@ IS_LINUX   = _SYS == "linux"
 import curses
 import requests
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # PATHS
-# ─────────────────────────────────────────────────────────────────────────────
+
 if IS_WINDOWS:
     _BASE = os.environ.get("APPDATA", os.path.expanduser("~"))
 else:
@@ -114,9 +107,9 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
 CACHE_FILE  = os.path.join(CONFIG_DIR, "cache.json")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # CONFIG HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
+
 def load_config():
     cfg = configparser.ConfigParser()
     if os.path.exists(CONFIG_FILE):
@@ -134,9 +127,9 @@ def gcv(cfg, section, key, fallback=""):
     except Exception:
         return fallback
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DISK CACHE  (keeps last good fetch so the app works on flaky connections)
-# ─────────────────────────────────────────────────────────────────────────────
+
+# DISK CACHE  (keeps the last good fetch so the app works on goofy connections)
+
 def cache_save(weather_data, alerts, lat, lon):
     try:
         payload = {
@@ -160,9 +153,9 @@ def cache_load():
     except Exception:
         return None, [], None
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # LOCALISATION STRINGS
-# ─────────────────────────────────────────────────────────────────────────────
+
 STRINGS = {
     "en": {
         "setup_title":    "LOCATION SETUP",
@@ -434,9 +427,9 @@ LANGUAGES = [
     ("es", "Espanol"),
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # WMO WEATHER CODE TABLES
-# ─────────────────────────────────────────────────────────────────────────────
+
 _WMO_EN = {
     0:"Clear sky",           1:"Mainly clear",        2:"Partly cloudy",       3:"Overcast",
     45:"Fog",                48:"Depositing rime fog",
@@ -491,9 +484,9 @@ def describe_wmo(code, lang="en"):
     tbl = _WMO_BY_LANG.get(lang, _WMO_EN)
     return tbl.get(code, _WMO_EN.get(code, f"Code {code}"))
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # UNIT CONVERSION & FORMATTING
-# ─────────────────────────────────────────────────────────────────────────────
+
 def c_to_f(c):
     """Celsius to Fahrenheit."""
     if c is None:
@@ -541,9 +534,8 @@ def uv_label(uv, lang="en"):
     else:        idx = 4
     return f"{uv:.0f} {cats[idx]}"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GEOCODING  --  Open-Meteo (free, no key, 300k+ places, fuzzy match)
-# ─────────────────────────────────────────────────────────────────────────────
+# GEOCODING  --  Open-Meteo (no key and free, 300k+ places which is super cool)
+
 _GEO_URL   = "https://geocoding-api.open-meteo.com/v1/search"
 _NOMINATIM = "https://nominatim.openstreetmap.org/search"
 _HEADERS   = {"User-Agent": "SkyWatcher/3.0 (free-software terminal weather)"}
@@ -661,9 +653,9 @@ def geocode_search(query, count=15, language="en"):
     return unique[:count]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # REVERSE GEOCODING  --  Nominatim / OpenStreetMap (no key, 1 req/sec)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def reverse_geocode(lat, lon):
     """Return (city_name, country_code) or (None, None)."""
     try:
@@ -683,9 +675,9 @@ def reverse_geocode(lat, lon):
     except Exception:
         return None, None
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # IP-BASED LOCATION DETECTION
-# ─────────────────────────────────────────────────────────────────────────────
+
 def detect_location_from_ip():
     """Try two free IP geolocation services.  Returns dict or None."""
     try:
@@ -712,9 +704,9 @@ def detect_location_from_ip():
         pass
     return None
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # WEATHER DATA  --  Open-Meteo (free, no key, NOAA GFS + DWD ICON + ECMWF)
-# ─────────────────────────────────────────────────────────────────────────────
+
 _METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
 def fetch_weather(lat, lon):
@@ -747,9 +739,9 @@ def fetch_weather(lat, lon):
     r.raise_for_status()
     return r.json()
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # ALERTS  --  United States  (NOAA / NWS)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def fetch_alerts_us(lat, lon):
     try:
         r = requests.get(
@@ -780,9 +772,9 @@ def fetch_alerts_us(lat, lon):
     except Exception:
         return []
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # ALERTS  --  Canada  (ECCC / MSC)
-# ─────────────────────────────────────────────────────────────────────────────
+
 _CA_BOXES = [
     ("bc", 48.3,60.0,-139.1,-114.0), ("ab",49.0,60.0,-120.0,-110.0),
     ("sk", 49.0,60.0,-110.0,-101.4), ("mb",49.0,60.0,-102.1, -88.9),
@@ -845,9 +837,9 @@ def fetch_alerts_ca(lat, lon):
     except Exception:
         return []
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # ALERTS  --  Europe  (MeteoAlarm / EUMETNET)
-# ─────────────────────────────────────────────────────────────────────────────
+
 METEOALARM_COUNTRIES = {
     "AD":"andorra","AT":"austria","BA":"bosnia-herzegovina","BE":"belgium",
     "BG":"bulgaria","BY":"belarus","CH":"switzerland","CY":"cyprus",
@@ -902,9 +894,9 @@ def fetch_alerts_eu(lat, lon, country):
     except Exception:
         return []
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # ALERTS  --  Australia  (Bureau of Meteorology)
-# ─────────────────────────────────────────────────────────────────────────────
+
 _AU_STATE_BOXES = [
     ("nsw", -37.6,-28.2,140.9,153.6), ("vic",-39.2,-33.9,140.9,150.0),
     ("qld", -29.2,-10.7,138.0,153.6), ("sa", -38.0,-26.0,129.0,141.0),
@@ -951,9 +943,8 @@ def fetch_alerts_au(lat, lon):
     except Exception:
         return []
 
-# ─────────────────────────────────────────────────────────────────────────────
 # ALERTS  --  New Zealand  (MetService)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def fetch_alerts_nz():
     try:
         r = requests.get(
@@ -983,9 +974,9 @@ def fetch_alerts_nz():
     except Exception:
         return []
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # ALERTS  --  India  (India Meteorological Department)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def fetch_alerts_in():
     try:
         r = requests.get(
@@ -1015,14 +1006,14 @@ def fetch_alerts_in():
     except Exception:
         return []
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 # ALERT DISPATCHER
 # Fetches weather alerts for the current country, plus USGS earthquakes
 # (location-aware, fast single JSON call).  All sources run concurrently
 # via threads so total time = slowest single source, not sum of all.
 # Alerts are cleared immediately on location change so stale alerts from
 # the previous location never linger.
-# ─────────────────────────────────────────────────────────────────────────────
+# 
 
 def _run_in_thread(fn, args, result_list):
     """Helper: call fn(*args), append results to result_list."""
@@ -1133,9 +1124,9 @@ def fetch_alerts(lat, lon, country, city=""):
 
     return wx_results + usgs_results, wx_covered
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # ALERT CLASSIFICATION
-# ─────────────────────────────────────────────────────────────────────────────
+
 _SEV_LEVEL = {"extreme": 3, "severe": 2, "moderate": 1, "minor": 1}
 
 def classify_alert_level(alerts):
@@ -1145,9 +1136,9 @@ def classify_alert_level(alerts):
         level = max(level, _SEV_LEVEL.get(sev, 1 if sev else 0))
     return level
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # COLOUR PAIRS
-# ─────────────────────────────────────────────────────────────────────────────
+
 C_DEFAULT  = 1
 C_DIM      = 2
 C_TITLE    = 3
@@ -1223,9 +1214,9 @@ def cp_dim(n):
     """Explicitly non-bold -- for secondary/subdued information."""
     return curses.color_pair(n)
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # DRAWING PRIMITIVES  (all safe against small terminals)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def safestr(win, y, x, text, attr=0):
     h, w = win.getmaxyx()
     if y < 0 or y >= h or x < 0:
@@ -1263,9 +1254,9 @@ def draw_box(win, y, x, bh, bw, attr=0, title=""):
         tx = x + max(2, (bw - len(t)) // 2)
         safestr(win, y, tx, t, attr | curses.A_BOLD)
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # DATA COLOURING
-# ─────────────────────────────────────────────────────────────────────────────
+
 def temp_color(t):
     """Colour based on Celsius value regardless of display unit."""
     try:
@@ -1306,9 +1297,9 @@ def raw_c(val):
     except Exception:
         return 0.0
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # VERBOSITY 0 -- Minimal
-# ─────────────────────────────────────────────────────────────────────────────
+
 def draw_v0(win, data, lang, unit):
     S     = STRINGS[lang]
     cur   = data.get("current", {})
@@ -1337,10 +1328,10 @@ def draw_v0(win, data, lang, unit):
     safestr(win, 6, 10,   fmt_temp(tmin, unit), temp_color(raw_c(tmin)))
     safestr(win, 5, col2, f"{S['sunrise']}: {rise}", cp(C_DIM))
     safestr(win, 6, col2, f"{S['sunset']}:  {sset}", cp(C_DIM))
+  
 
-# ─────────────────────────────────────────────────────────────────────────────
 # VERBOSITY 1 -- Standard
-# ─────────────────────────────────────────────────────────────────────────────
+
 def draw_v1(win, data, lang, last_updated, unit):
     S     = STRINGS[lang]
     h, w  = win.getmaxyx()
@@ -1405,9 +1396,9 @@ def draw_v1(win, data, lang, last_updated, unit):
         safestr(win, h-2, w-len(upd)-3, upd, cp(C_DIM))
     safestr(win, h-2, 3, "Open-Meteo (NOAA GFS / DWD ICON / ECMWF IFS)", cp_dim(C_DIM))
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # VERBOSITY 2 -- Detailed  (+ dew point, 12h hourly strip, 7-day table)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def draw_v2(win, data, lang, last_updated, unit):
     S      = STRINGS[lang]
     h, w   = win.getmaxyx()
@@ -1536,9 +1527,9 @@ def draw_v2(win, data, lang, last_updated, unit):
         safestr(win, h-2, w-len(upd)-3, upd, cp(C_DIM))
     safestr(win, h-2, 3, "Open-Meteo (NOAA GFS / DWD ICON / ECMWF IFS)", cp_dim(C_DIM))
 
-# ─────────────────────────────────────────────────────────────────────────────
-# VERY SMALL TERMINAL FALLBACK
-# ─────────────────────────────────────────────────────────────────────────────
+
+# TINY TERMINAL FALLBACK
+
 def draw_minimal(win, data, lang, unit):
     S     = STRINGS[lang]
     cur   = data.get("current", {})
@@ -1555,9 +1546,9 @@ def draw_minimal(win, data, lang, unit):
     safestr(win, 4, 2,
             f"{S['sunrise']}: {rise}  {S['sunset']}: {sset}", cp(C_DIM))
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # MAIN SCREEN
-# ─────────────────────────────────────────────────────────────────────────────
+
 def draw_main(stdscr, state, verb, lang, city, country, ds,
               lat="", lon="", fake_time=None, unit="c"):
     S    = STRINGS[lang]
@@ -1612,7 +1603,7 @@ def draw_main(stdscr, state, verb, lang, city, country, ds,
         centerstr(stdscr, 3, banner, cp(C_BANNER_W, bold=True))
         content_y = 4
     # Only show "no weather feed" notice when there are truly zero alerts
-    # from ANY source. A country like Ukraine has no MeteoAlarm feed but
+    # from ANY source. Ex. Ukraine has no MeteoAlarm feed but
     # will have State Dept Level-4 / FCDO advisories in `al` already.
     if not alert_covered and country and not al:
         msg = f"  {S['no_alert_cover']}  "
@@ -1661,9 +1652,9 @@ def draw_main(stdscr, state, verb, lang, city, country, ds,
 
     stdscr.refresh()
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # DEBUG OVERLAY  (F12)
-# ─────────────────────────────────────────────────────────────────────────────
+
 class DebugState:
     active       = False
     fake_warning = 0
@@ -1696,10 +1687,10 @@ def draw_debug_overlay(stdscr, ds, lang, alerts, lat="", lon=""):
     draw_box(stdscr, by, bx, bh, bw, cp(C_DEBUG))
     for i, line in enumerate(lines):
         safestr(stdscr, by+1+i, bx+1, line[:bw-2].ljust(bw-2), cp(C_DEBUG))
+      
 
-# ─────────────────────────────────────────────────────────────────────────────
 # ALERT DETAIL SCREEN
-# ─────────────────────────────────────────────────────────────────────────────
+
 def show_alert_screen(stdscr, alerts, lang):
     S      = STRINGS[lang]
     scroll = 0
@@ -1754,9 +1745,9 @@ def show_alert_screen(stdscr, alerts, lang):
         elif key == curses.KEY_NPAGE: scroll = min(scroll + visible, max(0, total - visible))
         elif key == curses.KEY_PPAGE: scroll = max(0, scroll - visible)
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # PICKER OVERLAY  (verbosity / language / units)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def _picker(stdscr, title, opts, current_idx):
     h, w    = stdscr.getmaxyx()
     visible = min(len(opts), h - 6)
@@ -1807,9 +1798,9 @@ def pick_unit(stdscr, current, lang):
     sel = _picker(stdscr, S["unit_label"], [S["unit_c"], S["unit_f"]], idx)
     return "f" if sel == 1 else "c"
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # LOCATION SETUP SCREEN
-# ─────────────────────────────────────────────────────────────────────────────
+
 def run_setup(stdscr, cfg, lang):
     S            = STRINGS[lang]
     left_query   = ""
@@ -1990,9 +1981,9 @@ def run_setup(stdscr, cfg, lang):
     curses.curs_set(0)
     return cfg
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # FIRST-RUN LOCATION CONFIRM SCREEN
-# ─────────────────────────────────────────────────────────────────────────────
+
 def location_confirm_screen(stdscr, detected):
     lat   = detected["lat"]
     lon   = detected["lon"]
@@ -2056,9 +2047,9 @@ def location_confirm_screen(stdscr, detected):
         if key in (10, 13, curses.KEY_ENTER): return True
         if key in (ord('s'), ord('S')):        return False
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # APP STATE & BACKGROUND REFRESH
-# ─────────────────────────────────────────────────────────────────────────────
+
 class AppState:
     def __init__(self):
         self.weather_data  = None
@@ -2121,9 +2112,9 @@ def refresh_data(state, lat, lon, country, city=""):
 
     state.loading = False
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # MAIN CURSES LOOP
-# ─────────────────────────────────────────────────────────────────────────────
+
 def main(stdscr, cli_args=None):
     init_colors()
     curses.curs_set(0)
@@ -2330,9 +2321,9 @@ def main(stdscr, cli_args=None):
             elif key in (ord('n'), ord('N')): ds.fake_time  = None
             elif key in (ord('z'), ord('Z')): ds.stress_mode = not ds.stress_mode
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # CLI  (--help, --once, --location, --lat, --lon, --verbosity, --unit)
-# ─────────────────────────────────────────────────────────────────────────────
+
 def build_arg_parser():
     p = argparse.ArgumentParser(
         prog="skywatcher",
@@ -2385,9 +2376,9 @@ def run_once(lat, lon, unit="c"):
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # TERMINAL CHECK
-# ─────────────────────────────────────────────────────────────────────────────
+
 def _check_terminal():
     if sys.stdout is None or sys.stderr is None:
         if IS_WINDOWS:
@@ -2416,9 +2407,9 @@ def _check_terminal():
                 pass
         sys.exit("Error: SkyWatcher requires a real terminal.")
 
-# ─────────────────────────────────────────────────────────────────────────────
+
 # ENTRY POINT
-# ─────────────────────────────────────────────────────────────────────────────
+
 def run(argv=None):
     parser   = build_arg_parser()
     cli_args = parser.parse_args(argv)
